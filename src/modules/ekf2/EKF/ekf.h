@@ -499,6 +499,28 @@ public:
 		return is_healthy;
 	}
 
+	bool measurementUpdate(VectorState &K, VectorState &H, float R, float innovation)
+	{
+		clearInhibitedStateKalmanGains(K);
+
+		auto &A = _temp_square_matrix_state;
+		A = matrix::eye<float, State::size>();
+		A -= K.multiplyByTranspose(H);
+		P = A * P;
+		P = P.multiplyByTranspose(A);
+
+		const VectorState KR = K * R;
+		P += KR.multiplyByTranspose(K);
+
+		constrainStateVariances();
+		forceCovarianceSymmetry();
+
+		// apply the state corrections
+		fuse(K, innovation);
+
+		return true;
+	}
+
 	void resetGlobalPosToExternalObservation(double lat_deg, double lon_deg, float accuracy, uint64_t timestamp_observation);
 
 	void updateParameters();
@@ -576,6 +598,7 @@ private:
 	float _yaw_rate_lpf_ef{0.0f};		///< Filtered angular rate about earth frame D axis (rad/sec)
 
 	SquareMatrixState P{};	///< state covariance matrix
+	SquareMatrixState _temp_square_matrix_state{}; ///< Used to pre-allocate a large matrix
 
 #if defined(CONFIG_EKF2_DRAG_FUSION)
 	estimator_aid_source2d_s _aid_src_drag{};

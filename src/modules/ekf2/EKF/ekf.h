@@ -468,57 +468,53 @@ public:
 	const auto &aid_src_aux_vel() const { return _aid_src_aux_vel; }
 #endif // CONFIG_EKF2_AUXVEL
 
-	bool measurementUpdate(VectorState &K, float innovation_variance, float innovation)
+	bool measurementUpdate(VectorState &K, const VectorState &H, const float R, const float innovation, const float innovation_variance, const bool force_full_joseph = false)
 	{
-		clearInhibitedStateKalmanGains(K);
+		bool is_healthy = true;
 
-		const VectorState KS = K * innovation_variance;
-		SquareMatrixState KHP;
+		if (clearInhibitedStateKalmanGains(K) || force_full_joseph) {
+			// Kalman gains modified so we need to use the (much more expensive) Joseph covariance update
+			auto &A = _temp_square_matrix_state;
+			A = matrix::eye<float, State::size>();
+			A -= K.multiplyByTranspose(H);
+			P = A * P;
+			P = P.multiplyByTranspose(A);
 
-		for (unsigned row = 0; row < State::size; row++) {
-			for (unsigned col = 0; col < State::size; col++) {
-				// Instead of literally computing KHP, use an equivalent
-				// equation involving less mathematical operations
-				KHP(row, col) = KS(row) * K(col);
+			const VectorState KR = K * R;
+			P += KR.multiplyByTranspose(K);
+
+		} else {
+			VectorState KS = K * innovation_variance;
+			SquareMatrixState KHP;
+
+			for (unsigned row = 0; row < State::size; row++) {
+				for (unsigned col = 0; col < State::size; col++) {
+					// Instad of literally computing KHP, use an equvalent
+					// equation involving less mathematical operations
+					KHP(row, col) = KS(row) * K(col);
+				}
+			}
+
+			if (checkAndFixCovarianceUpdate(KHP)) {
+				// apply the covariance corrections
+				P -= KHP;
+
+			} else {
+				is_healthy = false;
 			}
 		}
 
-		const bool is_healthy = checkAndFixCovarianceUpdate(KHP);
-
 		if (is_healthy) {
-			// apply the covariance corrections
-			P -= KHP;
-
 			constrainStateVariances();
 			forceCovarianceSymmetry();
 
 			// apply the state corrections
 			fuse(K, innovation);
+
+			return true;
 		}
 
-		return is_healthy;
-	}
-
-	bool measurementUpdate(VectorState &K, VectorState &H, float R, float innovation)
-	{
-		clearInhibitedStateKalmanGains(K);
-
-		auto &A = _temp_square_matrix_state;
-		A = matrix::eye<float, State::size>();
-		A -= K.multiplyByTranspose(H);
-		P = A * P;
-		P = P.multiplyByTranspose(A);
-
-		const VectorState KR = K * R;
-		P += KR.multiplyByTranspose(K);
-
-		constrainStateVariances();
-		forceCovarianceSymmetry();
-
-		// apply the state corrections
-		fuse(K, innovation);
-
-		return true;
+		return false;
 	}
 
 	void resetGlobalPosToExternalObservation(double lat_deg, double lon_deg, float accuracy, uint64_t timestamp_observation);
@@ -928,16 +924,28 @@ private:
 	float getMagDeclination();
 #endif // CONFIG_EKF2_MAGNETOMETER
 
-	void clearInhibitedStateKalmanGains(VectorState &K) const
+	// returns true if the Kalman gains were modified
+	bool clearInhibitedStateKalmanGains(VectorState &K) const
 	{
+		static constexpr float kMinKalmanGain = 1e-9f;
+		bool kalman_gains_modified = false;
+
 		for (unsigned i = 0; i < State::gyro_bias.dof; i++) {
 			if (_gyro_bias_inhibit[i]) {
+				if (K(State::gyro_bias.idx + i) > kMinKalmanGain || K(State::gyro_bias.idx + i) < -kMinKalmanGain) {
+					kalman_gains_modified = true;
+				}
+
 				K(State::gyro_bias.idx + i) = 0.f;
 			}
 		}
 
 		for (unsigned i = 0; i < State::accel_bias.dof; i++) {
 			if (_accel_bias_inhibit[i]) {
+				if (K(State::accel_bias.idx + i) > kMinKalmanGain || K(State::accel_bias.idx + i) < -kMinKalmanGain) {
+					kalman_gains_modified = true;
+				}
+
 				K(State::accel_bias.idx + i) = 0.f;
 			}
 		}
@@ -945,12 +953,20 @@ private:
 #if defined(CONFIG_EKF2_MAGNETOMETER)
 		if (!_control_status.flags.mag) {
 			for (unsigned i = 0; i < State::mag_I.dof; i++) {
+				if (K(State::mag_I.idx + i) > kMinKalmanGain || K(State::mag_I.idx + i) < -kMinKalmanGain) {
+					kalman_gains_modified = true;
+				}
+
 				K(State::mag_I.idx + i) = 0.f;
 			}
 		}
 
 		if (!_control_status.flags.mag) {
 			for (unsigned i = 0; i < State::mag_B.dof; i++) {
+				if (K(State::mag_B.idx + i) > kMinKalmanGain || K(State::mag_B.idx + i) < -kMinKalmanGain) {
+					kalman_gains_modified = true;
+				}
+
 				K(State::mag_B.idx + i) = 0.f;
 			}
 		}
@@ -959,10 +975,17 @@ private:
 #if defined(CONFIG_EKF2_WIND)
 		if (!_control_status.flags.wind) {
 			for (unsigned i = 0; i < State::wind_vel.dof; i++) {
+
+				if (K(State::wind_vel.idx + i) > kMinKalmanGain || K(State::wind_vel.idx + i) < -kMinKalmanGain) {
+					kalman_gains_modified = true;
+				}
+
 				K(State::wind_vel.idx + i) = 0.f;
 			}
 		}
 #endif // CONFIG_EKF2_WIND
+
+		return kalman_gains_modified;
 	}
 
 	// if the covariance correction will result in a negative variance, then

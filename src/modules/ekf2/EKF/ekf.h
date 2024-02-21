@@ -485,15 +485,10 @@ public:
 
 		} else {
 			VectorState KS = K * innovation_variance;
-			SquareMatrixState KHP;
+			auto &KHP = _temp_square_matrix_state;
 
-			for (unsigned row = 0; row < State::size; row++) {
-				for (unsigned col = 0; col < State::size; col++) {
-					// Instad of literally computing KHP, use an equvalent
-					// equation involving less mathematical operations
-					KHP(row, col) = KS(row) * K(col);
-				}
-			}
+			// KSK' == KHP but is much faster to compute
+			KHP = KS.multiplyByTranspose(K);
 
 			if (checkAndFixCovarianceUpdate(KHP)) {
 				// apply the covariance corrections

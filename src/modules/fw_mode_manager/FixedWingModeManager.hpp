@@ -252,6 +252,7 @@ private:
 
 	float _yaw{0.0f};
 	float _yawrate{0.0f};
+	float _height_rate_sp {0.0f};
 
 	float _body_acceleration_x{0.f};
 	float _body_velocity_x{0.f};
@@ -261,6 +262,7 @@ private:
 	float _reference_altitude{NAN}; // [m AMSL] altitude of the local projection reference point
 
 	bool _landed{true};
+	bool _hgt_rate_mod_enable{false};
 
 	// MANUAL MODES
 
@@ -442,6 +444,14 @@ private:
 	 * @return true if the bitmask contains the criterion
 	 */
 	bool checkLandingAbortBitMask(const uint8_t automatic_abort_criteria_bitmask, uint8_t landing_abort_criterion);
+
+	/**
+	 * @brief Maps the manual control setpoint (pilot sticks) to height rate commands
+	 *
+	 * @return Manual height rate setpoint [m/s]
+	 */
+	float getHeightRateSetpointThroughETA(const Vector2d &curr_pos, const Vector2f &ground_speed,
+				    const position_setpoint_s &pos_sp_curr);
 
 	/**
 	 * @brief Maps the manual control setpoint (pilot sticks) to height rate commands
@@ -830,6 +840,7 @@ private:
 		(ParamFloat<px4::params::NPFG_PERIOD>) _param_npfg_period,
 		(ParamFloat<px4::params::NPFG_DAMPING>) _param_npfg_damping,
 		(ParamBool<px4::params::NPFG_LB_PERIOD>) _param_npfg_en_period_lb,
+		(ParamBool<px4::params::ETA_CLMB_MOD>) _param_eta_based_climbrate_enable,
 		(ParamBool<px4::params::NPFG_UB_PERIOD>) _param_npfg_en_period_ub,
 		(ParamFloat<px4::params::NPFG_ROLL_TC>) _param_npfg_roll_time_const,
 		(ParamFloat<px4::params::NPFG_SW_DST_MLT>) _param_npfg_switch_distance_multiplier,

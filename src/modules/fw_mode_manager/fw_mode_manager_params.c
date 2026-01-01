@@ -70,6 +70,17 @@ PARAM_DEFINE_FLOAT(NPFG_DAMPING, 0.7f);
 PARAM_DEFINE_INT32(NPFG_LB_PERIOD, 1);
 
 /**
+ * Enable ETA based climbrate modulation
+ *
+ * If enabled, the algorithm will estimated time-of-arrival to calculate the required climb-rate.
+ *
+ * @boolean
+ * @group FW NPFG Control
+ */
+PARAM_DEFINE_INT32(ETA_CLMB_MOD, 0);
+
+
+/**
  * Enable automatic upper bound on the NPFG period
  *
  * Adapts period to maintain track keeping in variable winds and path curvature.

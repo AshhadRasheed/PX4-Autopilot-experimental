@@ -774,10 +774,20 @@ FixedWingModeManager::control_auto_position(const float control_interval, const 
 		}
 	}
 
+	if(_param_eta_based_climbrate_enable.get()){
+	 	_height_rate_sp = getHeightRateSetpointThroughETA(curr_pos,ground_speed,pos_sp_curr);
+		 _hgt_rate_mod_enable = true;
+	}
+	else{
+		_height_rate_sp = NAN;
+		_hgt_rate_mod_enable= false;
+	}
+	publishLocalPositionSetpoint(pos_sp_curr);
+
 	const fixed_wing_longitudinal_setpoint_s fw_longitudinal_control_sp = {
 		.timestamp = hrt_absolute_time(),
 		.altitude = position_sp_alt,
-		.height_rate = NAN,
+		.height_rate = _height_rate_sp,
 		.equivalent_airspeed = target_airspeed,
 		.pitch_direct = NAN,
 		.throttle_direct = NAN
@@ -2312,6 +2322,22 @@ float FixedWingModeManager::getMaxRollAngleNearGround(const float altitude, cons
 				math::radians(_param_fw_r_lim.get()));
 }
 
+float FixedWingModeManager::getHeightRateSetpointThroughETA( const Vector2d &curr_pos, const Vector2f &ground_speed,
+				    const position_setpoint_s &pos_sp_curr)
+{
+	float dist_to_wp = get_distance_to_next_waypoint(pos_sp_curr.lat, pos_sp_curr.lon, curr_pos(0),
+					     curr_pos(1));
+
+	float approach_time =dist_to_wp/ground_speed.norm();
+
+	float delta_alt = pos_sp_curr.alt - _current_altitude;
+
+
+	return delta_alt /approach_time;
+
+
+}
+
 
 void
 FixedWingModeManager::initializeAutoLanding(const hrt_abstime &now, const position_setpoint_s &pos_sp_prev,
@@ -2491,6 +2517,7 @@ void FixedWingModeManager::publishLocalPositionSetpoint(const position_setpoint_
 	local_position_setpoint.acceleration[0] = NAN;
 	local_position_setpoint.acceleration[1] = NAN;
 	local_position_setpoint.acceleration[2] = NAN;
+	local_position_setpoint.hgt_rate_mod_enable =_hgt_rate_mod_enable;
 	_local_pos_sp_pub.publish(local_position_setpoint);
 }
 

@@ -19554,6 +19554,16 @@ system more robust against disturbances (turbulence) in high wind.
 
 ## FW NPFG Control
 
+### ETA_CLMB_MOD (`INT32`) {#ETA_CLMB_MOD}
+
+Enable ETA based climbrate modulation.
+
+If enabled, the algorithm will use estimated time-of-arrival to calculate the required climb-rate.
+
+| Reboot | minValue | maxValue | increment | default      | unit |
+| ------ | -------- | -------- | --------- | ------------ | ---- |
+| &nbsp; |          |          |           | Disabled (0) |
+
 ### NPFG_DAMPING (`FLOAT`) {#NPFG_DAMPING}
 
 NPFG damping ratio.

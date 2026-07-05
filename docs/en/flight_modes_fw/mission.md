@@ -108,6 +108,7 @@ General parameters:
 
 | Parameter                                                                                          | Description                                                                                                                     |
 | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| <a id="ETA_CLMB_MOD"></a>[ETA_CLMB_MOD](../advanced_config/parameter_reference.md#ETA_CLMB_MOD)    | Enables fixed-wing ETA-based climb-rate modulation between mission waypoints.                                                    |
 | <a id="NAV_RCL_ACT"></a>[NAV_RCL_ACT](../advanced_config/parameter_reference.md#NAV_RCL_ACT)       | RC loss failsafe mode (what the vehicle will do if it looses RC connection) - e.g. enter hold mode, return mode, terminate etc. |
 | <a id="NAV_LOITER_RAD"></a>[NAV_LOITER_RAD](../advanced_config/parameter_reference.md#NAV_RCL_ACT) | Fixed-wing loiter radius.                                                                                                       |
 
@@ -211,12 +212,23 @@ The diagram below shows the sorts of paths that you might expect.
 ![acc-rad](../../assets/flying/acceptance_radius_mission.png)
 
 Vehicles switch to the next waypoint as soon as they enter the acceptance radius.
-This is defined by the "L1 distance", which is is computed from two parameters: [NPFG_DAMPING](../advanced_config/parameter_reference.md#NPFG_DAMPING) and [NPFG_PERIOD](../advanced_config/parameter_reference.md#NPFG_PERIOD), and the current ground speed.
+This is defined by the "L1 distance", which is computed from two parameters: [NPFG_DAMPING](../advanced_config/parameter_reference.md#NPFG_DAMPING) and [NPFG_PERIOD](../advanced_config/parameter_reference.md#NPFG_PERIOD), and the current ground speed.
 By default, it's about 70 meters.
 
 The equation is:
 
 $$L_{1_{distance}}=\frac{1}{\pi}L_{1_{damping}}L_{1_{period}}\left \| \vec{v}_{ {xy}_{ground} } \right \|$$
+
+## ETA-Based Climb Rate Modulation
+
+By default, fixed-wing missions generate an altitude setpoint along the active mission leg and let the longitudinal controller track that setpoint.
+If the aircraft reaches the waypoint laterally with remaining altitude error, it may need to loiter until the target altitude is reached.
+
+When [ETA_CLMB_MOD](../advanced_config/parameter_reference.md#ETA_CLMB_MOD) is enabled, PX4 instead estimates the time of arrival at the active waypoint from the current horizontal distance and ground speed.
+It then commands the climb or sink rate required to remove the remaining altitude error by that estimated arrival time.
+This helps the aircraft arrive at the waypoint closer to the requested altitude, reducing the need to loiter just to remove altitude error.
+
+This modulation applies to fixed-wing mission waypoint tracking and is constrained by the configured fixed-wing climb and sink limits.
 
 ## Mission Takeoff
 

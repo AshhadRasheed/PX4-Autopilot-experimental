@@ -2325,17 +2325,13 @@ float FixedWingModeManager::getMaxRollAngleNearGround(const float altitude, cons
 float FixedWingModeManager::getHeightRateSetpointThroughETA( const Vector2d &curr_pos, const Vector2f &ground_speed,
 				    const position_setpoint_s &pos_sp_curr)
 {
-	float dist_to_wp = get_distance_to_next_waypoint(pos_sp_curr.lat, pos_sp_curr.lon, curr_pos(0),
-					     curr_pos(1));
+	const float dist_to_wp = get_distance_to_next_waypoint(pos_sp_curr.lat, pos_sp_curr.lon, curr_pos(0),
+				 curr_pos(1));
+	const float approach_time = dist_to_wp / ground_speed.norm();
+	const float delta_alt = pos_sp_curr.alt - _current_altitude;
+	const float height_rate_saturation = _param_eta_height_rate_saturation.get();
 
-	float approach_time =dist_to_wp/ground_speed.norm();
-
-	float delta_alt = pos_sp_curr.alt - _current_altitude;
-
-
-	return delta_alt /approach_time;
-
-
+	return math::constrain(delta_alt / approach_time, -height_rate_saturation, height_rate_saturation);
 }
 
 

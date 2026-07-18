@@ -228,7 +228,8 @@ When [ETA_CLMB_MOD](../advanced_config/parameter_reference.md#ETA_CLMB_MOD) is e
 It then commands the climb or sink rate required to remove the remaining altitude error by that estimated arrival time.
 This helps the aircraft arrive at the waypoint closer to the requested altitude, reducing the need to loiter just to remove altitude error.
 
-This modulation applies to fixed-wing mission waypoint tracking and is constrained by the configured fixed-wing climb and sink limits.
+This modulation applies to fixed-wing mission waypoint tracking. The internally calculated height-rate setpoint is
+limited symmetrically by [ETA_HR_SAT](../advanced_config/parameter_reference.md#ETA_HR_SAT).
 
 ## Mission Takeoff
 

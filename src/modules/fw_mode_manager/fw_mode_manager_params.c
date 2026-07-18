@@ -79,6 +79,20 @@ PARAM_DEFINE_INT32(NPFG_LB_PERIOD, 1);
  */
 PARAM_DEFINE_INT32(ETA_CLMB_MOD, 0);
 
+/**
+ * ETA height-rate saturation
+ *
+ * Maximum absolute climb or sink rate commanded by ETA-based height-rate modulation.
+ *
+ * @unit m/s
+ * @min 0.1
+ * @max 20.0
+ * @decimal 1
+ * @increment 0.1
+ * @group FW NPFG Control
+ */
+PARAM_DEFINE_FLOAT(ETA_HR_SAT, 5.0f);
+
 
 /**
  * Enable automatic upper bound on the NPFG period
